@@ -11,50 +11,52 @@
 	extend: 'Rally.app.App',
 	componentCls: 'app',
 
+	items: [
+	{
+		xtype: 'container',
+		itemId: 'pulldown-container',
+		layout: {
+                type: 'hbox',
+                align: 'stretch'
+        }
+    }    
+	],
+
 	storyStore: undefined, 
     storyGrid: undefined,
  launch: function() {
-
+ 	  var me = this;
  	  console.log('Just the beginning!!');
 
-      this.pulldownContainer = Ext.create('Ext.container.Container', {    
-        id: 'pulldown-container-id',
-        layout: {
-                type: 'hbox',
-                align: 'stretch'
-            }
-      });
-
-      this.add(this.pulldownContainer);
-
-      this._loadIterations();
+      me._loadIterations();
     },
 
 	_loadIterations: function(){
 			console.log('Now loading the Iterations');
-			this.iterComboBox = Ext.create('Rally.ui.combobox.IterationComboBox', {
+
+			var me = this;
+
+			var iterComboBox = Ext.create('Rally.ui.combobox.IterationComboBox', {
+			     itemId: 'iteration-combobox',
 			     fieldLabel: 'Iteration',
 			     lableAlign: 'right',
 			     width: 300,
 			     defaultToCurrentTimebox : true,
 			     listeners: {
-			     	ready: function(combobox){
-			     		this._loadScheduleState();
-			     	},
-			     // 	scope : this
-			     // },
-			     select: function(combobox,records) {
-			     	this._loadData();
+			     	ready: me._loadScheduleState,
+			    	select: me._loadData,
+			    	scope: me
 			     },
-			     scope : this
-			 }
 			});
-			this.pulldownContainer.add(this.iterComboBox);
+			me.down('#pulldown-container').add(iterComboBox);
 	},
 
 	_loadScheduleState:function(){
 		console.log('Now loading ScheduleState');
-		this.scheduleStateComboBox = Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+		var me = this;
+
+		scheduleStateComboBox = Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+				itemId: 'schedule-state-combobox',
 				model: 'User Story',
 				field: 'ScheduleState',
 				fieldLabel: 'Schedule State',
@@ -62,34 +64,51 @@
 			    allQuery: '', 
 			    allowNoEntry : true,
 				listeners: {
-	            ready: function(combobox) {             
-	                 this._loadData();
-	           	},
-	            select: function(combobox, records) {
-	                 this._loadData();
-	           	},
-	           	scope: this
+		            ready: me._loadData,
+		           	select: me._loadData,
+		           	scope: me
 	         	}
 		});
-		this.pulldownContainer.add(this.scheduleStateComboBox);
+		me.down('#pulldown-container').add(scheduleStateComboBox);
 	},
 
-	_loadData: function(){
-		var selectedIterRef = this.iterComboBox.getRecord().get('_ref');
-		var selectedScheduleStateValue = this.scheduleStateComboBox.getRecord().get('value');   
 
-		var myFilters = [                  
-            {
+	_getFilters: function(iterationValue, scheduleStateValue) {
+
+      var iterationFilter = Ext.create('Rally.data.wsapi.Filter', {
               property: 'Iteration',
               operation: '=',
-              value: selectedIterRef
-            },
-            {
+              value: iterationValue
+      });
+
+      var scheduleStateFilter = Ext.create('Rally.data.wsapi.Filter', {
               property: 'ScheduleState',
               operation: '=',
-              value: selectedScheduleStateValue
-            }
-          ];
+              value: scheduleStateValue
+      });
+
+      return iterationFilter.and(scheduleStateFilter);
+
+    },
+
+	_loadData: function(){
+		var selectedIterRef = this.down('#iteration-combobox').getRecord().get('_ref');
+		var selectedScheduleStateValue = this.down('#schedule-state-combobox').getRecord().get('value');   
+
+		var myFilters = this._getFilters(selectedIterRef,selectedScheduleStateValue);
+
+		// var myFilters = [                  
+  //           {
+  //             property: 'Iteration',
+  //             operation: '=',
+  //             value: selectedIterRef
+  //           },
+  //           {
+  //             property: 'ScheduleState',
+  //             operation: '=',
+  //             value: selectedScheduleStateValue
+  //           }
+  //         ];
 
       if (this.storyStore) {
       	console.log('Store exist',this.storyStore);
